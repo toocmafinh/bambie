@@ -81,4 +81,4 @@ if st.button("Analyze Sentence") and user_input:
 
     st.subheader("Breakdown Result")
     formatted_html = format_response_with_template(response.text, html_template)
-    components.html(formatted_html, height=600)
+    components.html(formatted_html)
