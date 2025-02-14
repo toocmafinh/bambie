@@ -38,7 +38,7 @@ json_file_path = "saved_sentences.json"
 def save_sentence_to_json(sentence, english, literal):
     try:
         # Read existing data from the JSON file
-        if os.path.exists(json_file_path):
+        if os.path.exists(json_file_path) and os.path.getsize(json_file_path) > 0:
             with open(json_file_path, "r") as file:
                 data = json.load(file)
         else:
@@ -64,7 +64,7 @@ def save_sentence_to_json(sentence, english, literal):
 
 def get_sentences_from_json():
     try:
-        if os.path.exists(json_file_path):
+        if os.path.exists(json_file_path) and os.path.getsize(json_file_path) > 0:
             with open(json_file_path, "r") as file:
                 data = json.load(file)
             return data
