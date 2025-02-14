@@ -3,10 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Japanese Sentence Breakdown</title>
 </head>
 <body>
-    <ul>
-        {{breakdown}}
-    </ul>
+    <h1>Japanese Sentence Breakdown 🇯🇵</h1>
+    <form action="/analyze" method="post">
+        <label for="sentence">Enter a Japanese sentence:</label>
+        <input type="text" id="sentence" name="sentence">
+        <button type="submit">Analyze Sentence</button>
+    </form>
+    <h2>Saved Sentences</h2>
+    <div id="saved-sentences"></div>
+    <script>
+        async function fetchSavedSentences() {
+            const response = await fetch('/saved_sentences');
+            const sentences = await response.json();
+            const container = document.getElementById('saved-sentences');
+            container.innerHTML = '';
+            sentences.forEach(sentence => {
+                const sentenceDiv = document.createElement('div');
+                sentenceDiv.innerHTML = `
+                    <p><strong>Japanese:</strong> ${sentence.sentence}</p>
+                    <p><strong>English:</strong> ${sentence.english}</p>
+                    <p><strong>Literal Translation:</strong> ${sentence.literal}</p>
+                    <hr>
+                `;
+                container.appendChild(sentenceDiv);
+            });
+        }
+        fetchSavedSentences();
+    </script>
 </body>
 </html>

@@ -3,6 +3,7 @@ import streamlit as st
 import google.generativeai as genai
 import json
 import streamlit.components.v1 as components
+import mysql.connector
 
 # Read the HTML file
 with open("index.html", "r") as f:
@@ -32,45 +33,39 @@ st.title("Japanese Sentence Breakdown 🇯🇵")
 
 user_input = st.text_input("Enter a Japanese sentence:", "")
 
-# Define the JSON file path
-json_file_path = "saved_sentences.json"
+# Establish database connection
+conn = mysql.connector.connect(
+    host="localhost",
+    user="root",
+    password="1111",
+    database="japanese_learning"
+)
+cursor = conn.cursor()
 
-def save_sentence_to_json(sentence, english, literal):
+
+def save_sentence_to_db(sentence, english, literal):
     try:
-        # Read existing data from the JSON file
-        if os.path.exists(json_file_path) and os.path.getsize(json_file_path) > 0:
-            with open(json_file_path, "r") as file:
-                data = json.load(file)
-        else:
-            data = []
-
-        # Check if the sentence already exists in the JSON file
-        if any(item['sentence'] == sentence for item in data):
+        # Check if the sentence already exists in the database
+        cursor.execute("SELECT * FROM sentences WHERE sentence = %s", (sentence,))
+        if cursor.fetchone():
             st.warning("This sentence has already been saved")
         else:
-            # Add the new sentence to the data
-            data.append({
-                "sentence": sentence,
-                "english": english,
-                "literal": literal
-            })
-
-            # Write the updated data back to the JSON file
-            with open(json_file_path, "w") as file:
-                json.dump(data, file, indent=4)
+            # Insert the new sentence into the database
+            cursor.execute(
+                "INSERT INTO sentences (sentence, english, literal) VALUES (%s, %s, %s)",
+                (sentence, english, literal)
+            )
+            conn.commit()
             st.success("Sentence saved successfully!")
-    except Exception as err:
+    except mysql.connector.Error as err:
         st.error(f"Error: {err}")
 
-def get_sentences_from_json():
+def get_sentences_from_db():
     try:
-        if os.path.exists(json_file_path) and os.path.getsize(json_file_path) > 0:
-            with open(json_file_path, "r") as file:
-                data = json.load(file)
-            return data
-        else:
-            return []
-    except Exception as err:
+        cursor.execute("SELECT sentence, english, literal FROM sentences ORDER BY created_at DESC")
+        data = cursor.fetchall()
+        return [{"sentence": row[0], "english": row[1], "literal": row[2]} for row in data]
+    except mysql.connector.Error as err:
         st.error(f"Error: {err}")
         return []
 
@@ -94,7 +89,7 @@ def format_response_with_template(response_text, template):
                 sentence_html += f"<li><strong>{word['word']}</strong> ({word['reading']}): {word['meaning']}</li>"
             sentence_html += "</ul>"
             breakdown_html += sentence_html
-            save_sentence_to_json(item['sentence'], item['english'], item.get('literal', ''))
+            save_sentence_to_db(item['sentence'], item['english'], item.get('literal', ''))
         formatted_html = formatted_html.replace("{{sentence}}", item['sentence'])
         formatted_html = formatted_html.replace("{{english}}", item['english'])
         formatted_html = formatted_html.replace("{{literal}}", item.get('literal', ''))
@@ -126,9 +121,10 @@ if st.button("Analyze Sentence") and user_input:
     components.html(formatted_html, height=600, scrolling=True)
 
 if st.button("Show Saved Sentences"):
-    saved_sentences = get_sentences_from_json()
+    saved_sentences = get_sentences_from_db()
     st.subheader("Saved Sentences")
     for sentence in saved_sentences:
         st.write(f"Japanese: {sentence['sentence']}")
         st.write(f"English: {sentence['english']}")
+        st.write(f"Literal Translation: {sentence['literal']}")
         st.write("---")
