@@ -109,30 +109,24 @@ def format_response_with_template(response_text, template):
         return "<p>Error: Failed to parse response as JSON.</p>"
 
 if st.button("Analyze Sentence") and user_input:
-    sentences = user_input.split('.')
-    combined_response = []
-    for sentence in sentences:
-        if sentence.strip():
-            chat_session = model.start_chat(history=[
-    {
-      "role": "user",
-      "parts": [
-        "break down this sentence: まぜそばって知ってますか\n\nfor the sentence, include japanese, english and literal translation, and breakdown includes word, reading in furigana and meaning",
-      ],
-    },
-    {
-      "role": "model",
-      "parts": [
-        "```json\n[\n  {\n    \"sentence\": \"まぜそばって知ってますか\",\n    \"english\": \"Do you know what Mazesoba is?\",\n    \"literal\": \"Mazesoba, do you know?\",\n    \"breakdown\": [\n      {\n        \"word\": \"まぜそば\",\n        \"reading\": \"mazesoba\",\n        \"meaning\": \"Mazesoba (a type of brothless ramen)\"\n      },\n      {\n        \"word\": \"って\",\n        \"reading\": \"tte\",\n        \"meaning\": \"Speaking of; as for; regarding\"\n      },\n      {\n        \"word\": \"知ってますか\",\n        \"reading\": \"shittemasu ka\",\n        \"meaning\": \"Do you know?\"\n      },\n      {\n        \"word\": \"知って\",\n        \"reading\": \"shitte\",\n        \"meaning\": \"know (te-form of 知る - shiru)\"\n      },\n      {\n        \"word\": \"ます\",\n        \"reading\": \"masu\",\n        \"meaning\": \"polite verb ending\"\n      },\n      {\n        \"word\": \"か\",\n        \"reading\": \"ka\",\n        \"meaning\": \"question particle\"\n      }\n    ]\n  }\n]\n```",
-      ],
-    },
-  ]
-)
-            response = chat_session.send_message(f"break down this sentence: {sentence.strip()}")
-            cleaned_text = response.text.strip("```json\n").strip("\n```")
-            parsed_response = json.loads(cleaned_text)
-            combined_response.extend(parsed_response)
-
+    for sentence in user_input:
+        chat_session = model.start_chat(history=[
+            {
+                "role": "user",
+                "parts": [
+                    "break down this sentence: まぜそばって知ってますか\n\nfor the sentence, include japanese, english and literal translation, and breakdown includes word, reading in furigana and meaning",
+                ],
+            },
+            {
+                "role": "model",
+                "parts": [
+                    "```json\n[\n  {\n    \"sentence\": \"まぜそばって知ってますか\",\n    \"english\": \"Do you know what Mazesoba is?\",\n    \"literal\": \"Mazesoba, do you know?\",\n    \"breakdown\": [\n      {\n        \"word\": \"まぜそば\",\n        \"reading\": \"mazesoba\",\n        \"meaning\": \"Mazesoba (a type of brothless ramen)\"\n      },\n      {\n        \"word\": \"って\",\n        \"reading\": \"tte\",\n        \"meaning\": \"Speaking of; as for; regarding\"\n      },\n      {\n        \"word\": \"知ってますか\",\n        \"reading\": \"shittemasu ka\",\n        \"meaning\": \"Do you know?\"\n      },\n      {\n        \"word\": \"知って\",\n        \"reading\": \"shitte\",\n        \"meaning\": \"know (te-form of 知る - shiru)\"\n      },\n      {\n        \"word\": \"ます\",\n        \"reading\": \"masu\",\n        \"meaning\": \"polite verb ending\"\n      },\n      {\n        \"word\": \"か\",\n        \"reading\": \"ka\",\n        \"meaning\": \"question particle\"\n      }\n    ]\n  }\n]\n```",
+                ],
+            },
+        ])
+        response = chat_session.send_message(f"break down this sentence: {sentence.strip()}")
+        cleaned_text = response.text.strip("```json\n").strip("\n```")
+        parsed_response = json.loads(cleaned_text)
     st.subheader("Breakdown Result")
     formatted_html = format_response_with_template(json.dumps(combined_response), html_template)
     components.html(formatted_html, height=600, scrolling=True)
