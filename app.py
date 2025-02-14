@@ -4,6 +4,8 @@ import google.generativeai as genai
 import json
 import streamlit.components.v1 as components
 import mysql.connector
+from dotenv import load_dotenv
+
 
 # Read the HTML file
 with open("index.html", "r") as f:
@@ -34,13 +36,29 @@ st.title("Japanese Sentence Breakdown 🇯🇵")
 user_input = st.text_input("Enter a Japanese sentence:", "")
 
 # Establish database connection
-onn = mysql.connector.connect(
-    host=os.getenv("DB_HOST"),
-    user=os.getenv("DB_USER"),
-    password=os.getenv("DB_PASSWORD"),
-    database=os.getenv("DB_NAME")
+conn = mysql.connector.connect(
+    host="localhost",
+    user="root",
+    password="1111",
+    database="japanese_learning"
 )
 cursor = conn.cursor()
+
+
+load_dotenv()  # Load environment variables from .env file
+
+# Get the values from environment variables
+host = os.getenv("DB_HOST")
+user = os.getenv("DB_USER")
+password = os.getenv("DB_PASSWORD")
+database = os.getenv("DB_NAME")
+
+onn = mysql.connector.connect(
+    host=host,
+    user=user,
+    password=password,
+    database=database
+)
 
 def save_sentence(sentence, english, literal):
     try:
