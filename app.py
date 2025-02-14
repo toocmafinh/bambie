@@ -3,9 +3,6 @@ import streamlit as st
 import google.generativeai as genai
 import json
 import streamlit.components.v1 as components
-import mysql.connector
-from dotenv import load_dotenv
-
 
 # Read the HTML file
 with open("index.html", "r") as f:
@@ -35,64 +32,47 @@ st.title("Japanese Sentence Breakdown 🇯🇵")
 
 user_input = st.text_input("Enter a Japanese sentence:", "")
 
-# Establish database connection
-conn = mysql.connector.connect(
-    host="localhost",
-    user="root",
-    password="1111",
-    database="japanese_learning"
-)
-cursor = conn.cursor()
+# Define the JSON file path
+json_file_path = "saved_sentences.json"
 
-
-load_dotenv()  # Load environment variables from .env file
-
-# Get the values from environment variables
-host = os.getenv("DB_HOST")
-user = os.getenv("DB_USER")
-password = os.getenv("DB_PASSWORD")
-database = os.getenv("DB_NAME")
-
-onn = mysql.connector.connect(
-    host=host,
-    user=user,
-    password=password,
-    database=database
-)
-
-def save_sentence(sentence, english, literal):
+def save_sentence_to_json(sentence, english, literal):
     try:
-        sentence = sentence.strip()
-        english = english.strip()
-        literal = literal.strip()
-        
-        # Check if the sentence already exists in the database
-        cursor.execute(
-            """
-            SELECT COUNT(*) FROM sentences WHERE sentence = %s
-            """,
-            (sentence,)
-        )
-        result = cursor.fetchone()
-        
-        if result[0] > 0:
+        # Read existing data from the JSON file
+        if os.path.exists(json_file_path):
+            with open(json_file_path, "r") as file:
+                data = json.load(file)
+        else:
+            data = []
+
+        # Check if the sentence already exists in the JSON file
+        if any(item['sentence'] == sentence for item in data):
             st.warning("This sentence has already been saved")
         else:
-            cursor.execute(
-                """
-                INSERT INTO sentences (sentence, english, literal)
-                VALUES (%s, %s, %s)
-                """,
-                (sentence, english, literal)
-            )
-            conn.commit()
+            # Add the new sentence to the data
+            data.append({
+                "sentence": sentence,
+                "english": english,
+                "literal": literal
+            })
+
+            # Write the updated data back to the JSON file
+            with open(json_file_path, "w") as file:
+                json.dump(data, file, indent=4)
             st.success("Sentence saved successfully!")
-    except mysql.connector.Error as err:
+    except Exception as err:
         st.error(f"Error: {err}")
 
-def get_sentences():
-    cursor.execute("SELECT * FROM sentences ORDER BY created_at DESC")
-    return cursor.fetchall()
+def get_sentences_from_json():
+    try:
+        if os.path.exists(json_file_path):
+            with open(json_file_path, "r") as file:
+                data = json.load(file)
+            return data
+        else:
+            return []
+    except Exception as err:
+        st.error(f"Error: {err}")
+        return []
 
 def format_response_with_template(response_text, template):
     """
@@ -114,7 +94,7 @@ def format_response_with_template(response_text, template):
                 sentence_html += f"<li><strong>{word['word']}</strong> ({word['reading']}): {word['meaning']}</li>"
             sentence_html += "</ul>"
             breakdown_html += sentence_html
-            save_sentence(item['sentence'], item['english'], item.get('literal', ''))
+            save_sentence_to_json(item['sentence'], item['english'], item.get('literal', ''))
         formatted_html = formatted_html.replace("{{sentence}}", item['sentence'])
         formatted_html = formatted_html.replace("{{english}}", item['english'])
         formatted_html = formatted_html.replace("{{literal}}", item.get('literal', ''))
@@ -146,9 +126,9 @@ if st.button("Analyze Sentence") and user_input:
     components.html(formatted_html, height=600, scrolling=True)
 
 if st.button("Show Saved Sentences"):
-    saved_sentences = get_sentences()
+    saved_sentences = get_sentences_from_json()
     st.subheader("Saved Sentences")
     for sentence in saved_sentences:
-        st.write(f"Japanese: {sentence[1]}")
-        st.write(f"English: {sentence[2]}")
+        st.write(f"Japanese: {sentence['sentence']}")
+        st.write(f"English: {sentence['english']}")
         st.write("---")
