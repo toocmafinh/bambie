@@ -3,7 +3,6 @@ import streamlit as st
 import google.generativeai as genai
 import json
 import streamlit.components.v1 as components
-from google.api_core.exceptions import ResourceExhausted
 
 # Read the HTML file
 with open("index.html", "r") as f:
@@ -15,7 +14,7 @@ genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
 # Configure the model
 generation_config = {
-    "temperature": 0.5,
+    "temperature": 0,
     "top_p": 0.95,
     "top_k": 40,
     "max_output_tokens": 8192,
@@ -29,9 +28,9 @@ model = genai.GenerativeModel(
 
 # Display the logo and title
 st.image("https://i.imgur.com/9XzJ2Sx.png", width=150)
-st.title("Bambie Sensei's here to help!")
+st.title("Japanese Sentence Breakdown 🇯🇵")
 
-user_input = st.text_input("Enter a sentence:", "")
+user_input = st.text_input("Enter a Japanese sentence:", "")
 
 # Define the JSON file path
 json_file_path = "saved_sentences.json"
@@ -84,25 +83,19 @@ def format_response_with_template(response_text, template):
         parsed_response = json.loads(cleaned_text)
         formatted_html = template
         breakdown_html = ""
-        for idx, item in enumerate(parsed_response):
-            # Debugging: Print the item to see its structure
-            print(item)
-            if 'sentence' in item and 'english' in item:
-                sentence_html = f"""
-                <h3>{item['sentence']}</h3>
-                <p><strong>English:</strong> {item['english']}</p>
-                <p><strong>Literal Translation:</strong> {item.get('literal', '')}</p>
-                <ul>
-                """
-                for word in item.get("breakdown", []):
-                    sentence_html += f"<li><strong>{word['word']}</strong> ({word['reading']}): {word['meaning']}</li>"
-                sentence_html += "</ul>"
-                breakdown_html += sentence_html
-                save_sentence_to_json(item['sentence'], item['english'], item.get('literal', ''))
-            else:
-                print(f"Missing keys in item: {item}")
-        formatted_html = formatted_html.replace("{{sentence}}", item.get('sentence', ''))
-        formatted_html = formatted_html.replace("{{english}}", item.get('english', ''))
+        for item in parsed_response:
+            sentence_html = f"""
+            <h3>{item['sentence']}</h3>
+            <p><strong>English:</strong> {item['english']}</p>
+            <p><strong>Literal Translation:</strong> {item.get('literal', '')}</p>
+            <ul>
+            """
+            for word in item.get("breakdown", []):
+                sentence_html += f"<li><strong>{word['word']}</strong> ({word['reading']}): {word['meaning']}</li>"
+            sentence_html += "</ul>"
+            breakdown_html += sentence_html
+        formatted_html = formatted_html.replace("{{sentence}}", item['sentence'])
+        formatted_html = formatted_html.replace("{{english}}", item['english'])
         formatted_html = formatted_html.replace("{{literal}}", item.get('literal', ''))
         formatted_html = formatted_html.replace("{{breakdown}}", breakdown_html)
         return formatted_html
@@ -110,30 +103,31 @@ def format_response_with_template(response_text, template):
         return "<p>Error: Failed to parse response as JSON.</p>"
 
 if st.button("Analyze Sentence") and user_input:
-    try:
-        chat_session = model.start_chat(history=[
-            {
-                "role": "user",
-                "parts": [
-                    f"break down this sentence: {user_input.strip()}\n\nfor the sentence, include japanese, english and literal translation, and breakdown includes word, reading in furigana and meaning",
-                ],
-            }
-        ])
-        response = chat_session.send_message(f"break down this sentence: {user_input.strip()}")
-        cleaned_text = response.text.strip("```json\n").strip("\n```")
-        parsed_response = json.loads(cleaned_text)
-        combined_response = parsed_response
+    chat_session = model.start_chat(history=[
+    {
+      "role": "user",
+      "parts": [
+        "break down this sentence: まぜそばって知ってますか\n\nfor the sentence, include japanese, english and literal translation, and breakdown includes word, reading in furigana and meaning",
+      ],
+    },
+    {
+      "role": "model",
+      "parts": [
+        "```json\n[\n  {\n    \"sentence\": \"まぜそばって知ってますか\",\n    \"english\": \"Do you know what Mazesoba is?\",\n    \"literal\": \"Mazesoba, do you know?\",\n    \"breakdown\": [\n      {\n        \"word\": \"まぜそば\",\n        \"reading\": \"mazesoba\",\n        \"meaning\": \"Mazesoba (a type of brothless ramen)\"\n      },\n      {\n        \"word\": \"って\",\n        \"reading\": \"tte\",\n        \"meaning\": \"Speaking of; as for; regarding\"\n      },\n      {\n        \"word\": \"知ってますか\",\n        \"reading\": \"shittemasu ka\",\n        \"meaning\": \"Do you know?\"\n      },\n      {\n        \"word\": \"知って\",\n        \"reading\": \"shitte\",\n        \"meaning\": \"know (te-form of 知る - shiru)\"\n      },\n      {\n        \"word\": \"ます\",\n        \"reading\": \"masu\",\n        \"meaning\": \"polite verb ending\"\n      },\n      {\n        \"word\": \"か\",\n        \"reading\": \"ka\",\n        \"meaning\": \"question particle\"\n      }\n    ]\n  }\n]\n```",
+      ],
+    },
+  ]
+)
+    response = chat_session.send_message(f"break down this sentence: {user_input}")
 
-        # Debugging: Print the combined response
-        print(combined_response)
+    st.subheader("Breakdown Result")
+    formatted_html = format_response_with_template(response.text, html_template)
+    components.html(formatted_html, height=600, scrolling=True)
 
-        st.subheader("Breakdown Result")
-        formatted_html = format_response_with_template(json.dumps(combined_response), html_template)
-        components.html(formatted_html, height=600, scrolling=True)
-    except ResourceExhausted:
-        st.error("API quota exceeded or too many requests. Please try again later.")
-    except Exception as e:
-        st.error(f"An error occurred: {e}")
+    # Save the sentence to the JSON file
+    parsed_response = json.loads(response.text.strip("```json\n").strip("\n```"))
+    for item in parsed_response:
+        save_sentence_to_json(item['sentence'], item['english'], item.get('literal', ''))
 
 if st.button("Show Saved Sentences"):
     saved_sentences = get_sentences_from_json()
@@ -141,5 +135,4 @@ if st.button("Show Saved Sentences"):
     for sentence in saved_sentences:
         st.write(f"Japanese: {sentence['sentence']}")
         st.write(f"English: {sentence['english']}")
-        st.write(f"Literal Translation: {sentence['literal']}")
         st.write("---")
