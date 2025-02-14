@@ -33,13 +33,13 @@ st.title("Japanese Sentence Breakdown 🇯🇵")
 
 user_input = st.text_input("Enter a Japanese sentence:", "")
 
-# Establish database connection
-conn = mysql.connector.connect(
-    host="localhost",
-    user="root",
-    password="1111",
-    database="japanese_learning"
-)
+# Initialize connection.
+conn = st.connection('mysql', type='sql')
+
+# Perform query.
+df = conn.query('SELECT * from japanese_learning;', ttl=600)
+
+
 cursor = conn.cursor()
 
 
