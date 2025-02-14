@@ -12,7 +12,6 @@ with open("index.html", "r") as f:
 os.environ["GEMINI_API_KEY"] = "AIzaSyB1voqyHXB3laUN6WrRpBTfZSh8CcD5FjE"
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
-
 # Configure the model
 generation_config = {
     "temperature": 0,
@@ -32,6 +31,48 @@ st.image("https://i.imgur.com/9XzJ2Sx.png", width=150)
 st.title("Japanese Sentence Breakdown 🇯🇵")
 
 user_input = st.text_input("Enter a Japanese sentence:", "")
+
+# Define the JSON file path
+json_file_path = "saved_sentences.json"
+
+def save_sentence_to_json(sentence, english, literal):
+    try:
+        # Read existing data from the JSON file
+        if os.path.exists(json_file_path) and os.path.getsize(json_file_path) > 0:
+            with open(json_file_path, "r") as file:
+                data = json.load(file)
+        else:
+            data = []
+
+        # Check if the sentence already exists in the JSON file
+        if any(item['sentence'] == sentence for item in data):
+            st.warning("This sentence has already been saved")
+        else:
+            # Add the new sentence to the beginning of the data
+            data.insert(0, {
+                "sentence": sentence,
+                "english": english,
+                "literal": literal
+            })
+
+            # Write the updated data back to the JSON file
+            with open(json_file_path, "w") as file:
+                json.dump(data, file, indent=4)
+            st.success("Sentence saved successfully!")
+    except Exception as err:
+        st.error(f"Error: {err}")
+
+def get_sentences_from_json():
+    try:
+        if os.path.exists(json_file_path) and os.path.getsize(json_file_path) > 0:
+            with open(json_file_path, "r") as file:
+                data = json.load(file)
+            return data
+        else:
+            return []
+    except Exception as err:
+        st.error(f"Error: {err}")
+        return []
 
 def format_response_with_template(response_text, template):
     """
@@ -82,3 +123,16 @@ if st.button("Analyze Sentence") and user_input:
     st.subheader("Breakdown Result")
     formatted_html = format_response_with_template(response.text, html_template)
     components.html(formatted_html, height=600, scrolling=True)
+
+    # Save the sentence to the JSON file
+    parsed_response = json.loads(response.text.strip("```json\n").strip("\n```"))
+    for item in parsed_response:
+        save_sentence_to_json(item['sentence'], item['english'], item.get('literal', ''))
+
+if st.button("Show Saved Sentences"):
+    saved_sentences = get_sentences_from_json()
+    st.subheader("Saved Sentences")
+    for sentence in saved_sentences:
+        st.write(f"Japanese: {sentence['sentence']}")
+        st.write(f"English: {sentence['english']}")
+        st.write("---")
