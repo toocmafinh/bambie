@@ -28,9 +28,9 @@ model = genai.GenerativeModel(
 
 # Display the logo and title
 st.image("https://i.imgur.com/9XzJ2Sx.png", width=150)
-st.title("Japanese Sentence Breakdown 🇯🇵")
+st.title("Bambie Sensei's here to help!")
 
-user_input = st.text_input("Enter a Japanese sentence:", "")
+user_input = st.text_input("Enter a sentence:", "")
 
 # Define the JSON file path
 json_file_path = "saved_sentences.json"
