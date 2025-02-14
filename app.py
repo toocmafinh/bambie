@@ -84,19 +84,24 @@ def format_response_with_template(response_text, template):
         formatted_html = template
         breakdown_html = ""
         for idx, item in enumerate(parsed_response):
-            sentence_html = f"""
-            <h3>{item['sentence']}</h3>
-            <p><strong>English:</strong> {item['english']}</p>
-            <p><strong>Literal Translation:</strong> {item.get('literal', '')}</p>
-            <ul>
-            """
-            for word in item.get("breakdown", []):
-                sentence_html += f"<li><strong>{word['word']}</strong> ({word['reading']}): {word['meaning']}</li>"
-            sentence_html += "</ul>"
-            breakdown_html += sentence_html
-            save_sentence_to_json(item['sentence'], item['english'], item.get('literal', ''))
-        formatted_html = formatted_html.replace("{{sentence}}", item['sentence'])
-        formatted_html = formatted_html.replace("{{english}}", item['english'])
+            # Debugging: Print the item to see its structure
+            print(item)
+            if 'sentence' in item and 'english' in item:
+                sentence_html = f"""
+                <h3>{item['sentence']}</h3>
+                <p><strong>English:</strong> {item['english']}</p>
+                <p><strong>Literal Translation:</strong> {item.get('literal', '')}</p>
+                <ul>
+                """
+                for word in item.get("breakdown", []):
+                    sentence_html += f"<li><strong>{word['word']}</strong> ({word['reading']}): {word['meaning']}</li>"
+                sentence_html += "</ul>"
+                breakdown_html += sentence_html
+                save_sentence_to_json(item['sentence'], item['english'], item.get('literal', ''))
+            else:
+                print(f"Missing keys in item: {item}")
+        formatted_html = formatted_html.replace("{{sentence}}", item.get('sentence', ''))
+        formatted_html = formatted_html.replace("{{english}}", item.get('english', ''))
         formatted_html = formatted_html.replace("{{literal}}", item.get('literal', ''))
         formatted_html = formatted_html.replace("{{breakdown}}", breakdown_html)
         return formatted_html
@@ -104,7 +109,11 @@ def format_response_with_template(response_text, template):
         return "<p>Error: Failed to parse response as JSON.</p>"
 
 if st.button("Analyze Sentence") and user_input:
-    chat_session = model.start_chat(history=[
+    sentences = user_input.split('.')
+    combined_response = []
+    for sentence in sentences:
+        if sentence.strip():
+            chat_session = model.start_chat(history=[
     {
       "role": "user",
       "parts": [
@@ -119,10 +128,13 @@ if st.button("Analyze Sentence") and user_input:
     },
   ]
 )
-    response = chat_session.send_message(f"break down this sentence: {user_input}")
+            response = chat_session.send_message(f"break down this sentence: {sentence.strip()}")
+            cleaned_text = response.text.strip("```json\n").strip("\n```")
+            parsed_response = json.loads(cleaned_text)
+            combined_response.extend(parsed_response)
 
     st.subheader("Breakdown Result")
-    formatted_html = format_response_with_template(response.text, html_template)
+    formatted_html = format_response_with_template(json.dumps(combined_response), html_template)
     components.html(formatted_html, height=600, scrolling=True)
 
 if st.button("Show Saved Sentences"):
