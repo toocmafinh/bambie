@@ -3,6 +3,7 @@ import streamlit as st
 import google.generativeai as genai
 import json
 import streamlit.components.v1 as components
+from google.api_core.exceptions import ResourceExhausted
 
 # Read the HTML file
 with open("index.html", "r") as f:
@@ -14,7 +15,7 @@ genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
 # Configure the model
 generation_config = {
-    "temperature": 0,
+    "temperature": 0.5,
     "top_p": 0.95,
     "top_k": 40,
     "max_output_tokens": 8192,
@@ -109,27 +110,30 @@ def format_response_with_template(response_text, template):
         return "<p>Error: Failed to parse response as JSON.</p>"
 
 if st.button("Analyze Sentence") and user_input:
-    for sentence in user_input:
+    try:
         chat_session = model.start_chat(history=[
             {
                 "role": "user",
                 "parts": [
-                    "break down this sentence: まぜそばって知ってますか\n\nfor the sentence, include japanese, english and literal translation, and breakdown includes word, reading in furigana and meaning",
+                    f"break down this sentence: {user_input.strip()}\n\nfor the sentence, include japanese, english and literal translation, and breakdown includes word, reading in furigana and meaning",
                 ],
-            },
-            {
-                "role": "model",
-                "parts": [
-                    "```json\n[\n  {\n    \"sentence\": \"まぜそばって知ってますか\",\n    \"english\": \"Do you know what Mazesoba is?\",\n    \"literal\": \"Mazesoba, do you know?\",\n    \"breakdown\": [\n      {\n        \"word\": \"まぜそば\",\n        \"reading\": \"mazesoba\",\n        \"meaning\": \"Mazesoba (a type of brothless ramen)\"\n      },\n      {\n        \"word\": \"って\",\n        \"reading\": \"tte\",\n        \"meaning\": \"Speaking of; as for; regarding\"\n      },\n      {\n        \"word\": \"知ってますか\",\n        \"reading\": \"shittemasu ka\",\n        \"meaning\": \"Do you know?\"\n      },\n      {\n        \"word\": \"知って\",\n        \"reading\": \"shitte\",\n        \"meaning\": \"know (te-form of 知る - shiru)\"\n      },\n      {\n        \"word\": \"ます\",\n        \"reading\": \"masu\",\n        \"meaning\": \"polite verb ending\"\n      },\n      {\n        \"word\": \"か\",\n        \"reading\": \"ka\",\n        \"meaning\": \"question particle\"\n      }\n    ]\n  }\n]\n```",
-                ],
-            },
+            }
         ])
-        response = chat_session.send_message(f"break down this sentence: {sentence.strip()}")
+        response = chat_session.send_message(f"break down this sentence: {user_input.strip()}")
         cleaned_text = response.text.strip("```json\n").strip("\n```")
         parsed_response = json.loads(cleaned_text)
-    st.subheader("Breakdown Result")
-    formatted_html = format_response_with_template(json.dumps(combined_response), html_template)
-    components.html(formatted_html, height=600, scrolling=True)
+        combined_response = parsed_response
+
+        # Debugging: Print the combined response
+        print(combined_response)
+
+        st.subheader("Breakdown Result")
+        formatted_html = format_response_with_template(json.dumps(combined_response), html_template)
+        components.html(formatted_html, height=600, scrolling=True)
+    except ResourceExhausted:
+        st.error("API quota exceeded or too many requests. Please try again later.")
+    except Exception as e:
+        st.error(f"An error occurred: {e}")
 
 if st.button("Show Saved Sentences"):
     saved_sentences = get_sentences_from_json()
@@ -137,4 +141,5 @@ if st.button("Show Saved Sentences"):
     for sentence in saved_sentences:
         st.write(f"Japanese: {sentence['sentence']}")
         st.write(f"English: {sentence['english']}")
+        st.write(f"Literal Translation: {sentence['literal']}")
         st.write("---")
