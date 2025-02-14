@@ -3,6 +3,7 @@ import streamlit as st
 import google.generativeai as genai
 import json
 import streamlit.components.v1 as components
+import mysql.connector
 
 # Read the HTML file
 with open("index.html", "r") as f:
@@ -11,7 +12,6 @@ with open("index.html", "r") as f:
 # Set API Key (use environment variables for security)
 os.environ["GEMINI_API_KEY"] = "AIzaSyB1voqyHXB3laUN6WrRpBTfZSh8CcD5FjE"
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-
 
 # Configure the model
 generation_config = {
@@ -33,6 +33,49 @@ st.title("Japanese Sentence Breakdown 🇯🇵")
 
 user_input = st.text_input("Enter a Japanese sentence:", "")
 
+# Establish database connection
+conn = mysql.connector.connect(
+    host="localhost",
+    user="root",
+    password="1111",
+    database="japanese_learning"
+)
+cursor = conn.cursor()
+
+def save_sentence(sentence, english, literal):
+    try:
+        sentence = sentence.strip()
+        english = english.strip()
+        literal = literal.strip()
+        
+        # Check if the sentence already exists in the database
+        cursor.execute(
+            """
+            SELECT COUNT(*) FROM sentences WHERE sentence = %s
+            """,
+            (sentence,)
+        )
+        result = cursor.fetchone()
+        
+        if result[0] > 0:
+            st.warning("This sentence has already been saved")
+        else:
+            cursor.execute(
+                """
+                INSERT INTO sentences (sentence, english, literal)
+                VALUES (%s, %s, %s)
+                """,
+                (sentence, english, literal)
+            )
+            conn.commit()
+            st.success("Sentence saved successfully!")
+    except mysql.connector.Error as err:
+        st.error(f"Error: {err}")
+
+def get_sentences():
+    cursor.execute("SELECT * FROM sentences ORDER BY created_at DESC")
+    return cursor.fetchall()
+
 def format_response_with_template(response_text, template):
     """
     Parses the JSON response and formats it using the HTML template.
@@ -42,7 +85,7 @@ def format_response_with_template(response_text, template):
         parsed_response = json.loads(cleaned_text)
         formatted_html = template
         breakdown_html = ""
-        for item in parsed_response:
+        for idx, item in enumerate(parsed_response):
             sentence_html = f"""
             <h3>{item['sentence']}</h3>
             <p><strong>English:</strong> {item['english']}</p>
@@ -53,6 +96,7 @@ def format_response_with_template(response_text, template):
                 sentence_html += f"<li><strong>{word['word']}</strong> ({word['reading']}): {word['meaning']}</li>"
             sentence_html += "</ul>"
             breakdown_html += sentence_html
+            save_sentence(item['sentence'], item['english'], item.get('literal', ''))
         formatted_html = formatted_html.replace("{{sentence}}", item['sentence'])
         formatted_html = formatted_html.replace("{{english}}", item['english'])
         formatted_html = formatted_html.replace("{{literal}}", item.get('literal', ''))
@@ -81,4 +125,12 @@ if st.button("Analyze Sentence") and user_input:
 
     st.subheader("Breakdown Result")
     formatted_html = format_response_with_template(response.text, html_template)
-    components.html(formatted_html)
+    components.html(formatted_html, height=600, scrolling=True)
+
+if st.button("Show Saved Sentences"):
+    saved_sentences = get_sentences()
+    st.subheader("Saved Sentences")
+    for sentence in saved_sentences:
+        st.write(f"Japanese: {sentence[1]}")
+        st.write(f"English: {sentence[2]}")
+        st.write("---")
