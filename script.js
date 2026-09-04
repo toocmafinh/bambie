@@ -1,4 +1,4 @@
-const phrases = [
+const curatedPhrases = [
   {
     sentence: "まぜそばって知ってますか",
     english: "Do you know what mazesoba is?",
@@ -144,6 +144,9 @@ const phrases = [
   },
 ];
 
+const customStorageKey = "bambie-custom-phrases";
+const customPhrases = getCustomPhrases();
+const phrases = [...curatedPhrases, ...customPhrases];
 const bySentence = new Map(phrases.map((phrase) => [normalize(phrase.sentence), phrase]));
 let currentPhrase = phrases[0];
 let practiceIndex = 3;
@@ -156,6 +159,9 @@ const literalDisplay = document.querySelector("#literal-display");
 const tokenGrid = document.querySelector("#token-grid");
 const saveButton = document.querySelector("#save-button");
 const toast = document.querySelector("#toast");
+const customSentenceForm = document.querySelector("#custom-sentence-form");
+const customSentenceLabel = document.querySelector("#custom-sentence-label");
+const customPieces = document.querySelector("#custom-pieces");
 
 function normalize(value) {
   return value.trim().replace(/\s+/g, "").replace(/[。！？!?]+$/u, "");
@@ -168,6 +174,26 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function getCustomPhrases() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(customStorageKey) || "[]");
+    if (!Array.isArray(stored)) return [];
+    return stored
+      .filter((phrase) => phrase && typeof phrase.sentence === "string" && Array.isArray(phrase.pieces))
+      .map((phrase) => ({ ...phrase, custom: true }));
+  } catch {
+    return [];
+  }
+}
+
+function setCustomPhrases() {
+  localStorage.setItem(customStorageKey, JSON.stringify(customPhrases));
+}
+
+function updateLibraryCount() {
+  document.querySelector("#library-count").textContent = phrases.length;
 }
 
 function getSaved() {
@@ -191,6 +217,60 @@ function showToast(message) {
   toast.classList.add("is-visible");
   window.clearTimeout(toastTimer);
   toastTimer = window.setTimeout(() => toast.classList.remove("is-visible"), 2200);
+}
+
+function segmentJapanese(sentence) {
+  try {
+    if (Intl.Segmenter) {
+      const segmenter = new Intl.Segmenter("ja", { granularity: "word" });
+      const pieces = [...segmenter.segment(sentence)]
+        .filter((part) => part.isWordLike)
+        .map((part) => part.segment.trim())
+        .filter(Boolean);
+      if (pieces.length) return pieces;
+    }
+  } catch {
+    // A single editable piece is a safe fallback on older browsers.
+  }
+  return [sentence.trim()];
+}
+
+function addCustomPieceRow({ word = "", reading = "", meaning = "" } = {}) {
+  const row = document.createElement("div");
+  row.className = "custom-piece-row";
+  row.innerHTML = `
+    <input class="piece-field" data-field="word" type="text" value="${escapeHtml(word)}" placeholder="Word" aria-label="Japanese word" required />
+    <input class="piece-field" data-field="reading" type="text" value="${escapeHtml(reading)}" placeholder="Reading" aria-label="Reading" />
+    <input class="piece-field" data-field="meaning" type="text" value="${escapeHtml(meaning)}" placeholder="Meaning" aria-label="Meaning" required />
+    <button class="remove-piece" type="button" aria-label="Remove word piece">×</button>
+  `;
+  row.querySelector(".remove-piece").addEventListener("click", () => {
+    if (customPieces.children.length === 1) {
+      row.querySelector('[data-field="word"]').value = "";
+      row.querySelector('[data-field="reading"]').value = "";
+      row.querySelector('[data-field="meaning"]').value = "";
+      return;
+    }
+    row.remove();
+  });
+  customPieces.append(row);
+}
+
+function openCustomSentenceForm(sentence) {
+  customSentenceLabel.textContent = sentence;
+  customSentenceForm.dataset.sentence = sentence;
+  document.querySelector("#custom-english").value = "";
+  document.querySelector("#custom-literal").value = "";
+  customPieces.innerHTML = "";
+  segmentJapanese(sentence).forEach((word) => addCustomPieceRow({ word }));
+  customSentenceForm.hidden = false;
+  customSentenceForm.scrollIntoView({ behavior: "smooth", block: "center" });
+  document.querySelector("#custom-english").focus({ preventScroll: true });
+}
+
+function closeCustomSentenceForm() {
+  customSentenceForm.hidden = true;
+  customSentenceForm.removeAttribute("data-sentence");
 }
 
 function showPiece(piece, index) {
@@ -225,18 +305,67 @@ function renderPhrase(phrase) {
 
 document.querySelector("#sentence-form").addEventListener("submit", (event) => {
   event.preventDefault();
-  const phrase = bySentence.get(normalize(sentenceInput.value));
-  if (!phrase) {
-    showToast("Choose one of the 13 curated sentences for a complete breakdown.");
+  const sentence = sentenceInput.value.trim();
+  if (!sentence) {
+    showToast("Add a Japanese sentence first.");
     sentenceInput.focus();
     return;
   }
+  const phrase = bySentence.get(normalize(sentence));
+  if (!phrase) {
+    openCustomSentenceForm(sentence);
+    return;
+  }
+  closeCustomSentenceForm();
   renderPhrase(phrase);
+  document.querySelector("#analysis-card").scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+document.querySelector("#add-piece-button").addEventListener("click", () => addCustomPieceRow());
+document.querySelector("#cancel-custom-sentence").addEventListener("click", closeCustomSentenceForm);
+
+customSentenceForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const sentence = customSentenceForm.dataset.sentence?.trim();
+  const english = document.querySelector("#custom-english").value.trim();
+  const literal = document.querySelector("#custom-literal").value.trim();
+  const pieces = [...customPieces.querySelectorAll(".custom-piece-row")]
+    .map((row) => {
+      const word = row.querySelector('[data-field="word"]').value.trim();
+      const reading = row.querySelector('[data-field="reading"]').value.trim();
+      const meaning = row.querySelector('[data-field="meaning"]').value.trim();
+      return word ? [word, reading || word, "", meaning, "Part of your custom sentence."] : null;
+    })
+    .filter(Boolean);
+
+  if (!sentence || !english || !pieces.length || pieces.some((piece) => !piece[3])) {
+    showToast("Add the English meaning and a meaning for each word piece.");
+    return;
+  }
+
+  const phrase = {
+    sentence,
+    english,
+    literal: literal || english,
+    pieces,
+    custom: true,
+  };
+
+  customPhrases.push(phrase);
+  phrases.push(phrase);
+  bySentence.set(normalize(sentence), phrase);
+  setCustomPhrases();
+  updateLibraryCount();
+  closeCustomSentenceForm();
+  renderPhrase(phrase);
+  renderLibrary(document.querySelector("#library-search").value);
+  showToast("Added to your phrase library.");
   document.querySelector("#analysis-card").scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
 document.querySelectorAll("[data-sample]").forEach((button) => {
   button.addEventListener("click", () => {
+    closeCustomSentenceForm();
     sentenceInput.value = button.dataset.sample;
     renderPhrase(bySentence.get(normalize(button.dataset.sample)));
   });
@@ -288,7 +417,7 @@ function renderLibrary(query = "") {
       <h2 lang="ja">${escapeHtml(phrase.sentence)}</h2>
       <p>${escapeHtml(phrase.english)}</p>
       <footer>
-        <span>${getSaved().includes(phrase.sentence) ? "Saved" : "Curated phrase"}</span>
+        <span>${getSaved().includes(phrase.sentence) ? "Saved" : phrase.custom ? "Your sentence" : "Curated phrase"}</span>
         <button type="button" data-open-sentence="${escapeHtml(phrase.sentence)}">Study sentence →</button>
       </footer>
     </article>
@@ -357,12 +486,12 @@ function registerWebMcpTools() {
   };
 
   register({
-    name: "study_curated_sentence",
+    name: "study_sentence",
     title: "Study a Japanese sentence",
-    description: "Open the word-by-word lesson for one of Bambie’s curated Japanese sentences.",
+    description: "Open the word-by-word lesson for a sentence in Bambie’s phrase library.",
     inputSchema: {
       type: "object",
-      properties: { sentence: { type: "string", description: "Exact Japanese sentence from Bambie’s phrase library." } },
+      properties: { sentence: { type: "string", description: "Exact Japanese sentence from Bambie’s phrase library, including custom sentences." } },
       required: ["sentence"],
       additionalProperties: false,
     },
@@ -370,7 +499,7 @@ function registerWebMcpTools() {
     execute(input) {
       if (!input || typeof input.sentence !== "string") throw new Error("A Japanese sentence is required.");
       const phrase = bySentence.get(normalize(input.sentence));
-      if (!phrase) throw new Error("That sentence is not in Bambie’s curated phrase library.");
+      if (!phrase) throw new Error("That sentence is not in Bambie’s phrase library yet.");
       renderPhrase(phrase);
       changeView("study");
       return { sentence: phrase.sentence, english: phrase.english, pieces: phrase.pieces.length };
@@ -380,10 +509,10 @@ function registerWebMcpTools() {
   register({
     name: "save_study_sentence",
     title: "Save a study sentence",
-    description: "Save one curated Japanese sentence to this browser’s Bambie study list.",
+    description: "Save one Japanese sentence from Bambie’s phrase library to this browser’s study list.",
     inputSchema: {
       type: "object",
-      properties: { sentence: { type: "string", description: "Exact Japanese sentence from Bambie’s phrase library." } },
+      properties: { sentence: { type: "string", description: "Exact Japanese sentence from Bambie’s phrase library, including custom sentences." } },
       required: ["sentence"],
       additionalProperties: false,
     },
@@ -391,7 +520,7 @@ function registerWebMcpTools() {
     execute(input) {
       if (!input || typeof input.sentence !== "string") throw new Error("A Japanese sentence is required.");
       const phrase = bySentence.get(normalize(input.sentence));
-      if (!phrase) throw new Error("That sentence is not in Bambie’s curated phrase library.");
+      if (!phrase) throw new Error("That sentence is not in Bambie’s phrase library yet.");
       const saved = getSaved();
       if (!saved.includes(phrase.sentence)) {
         saved.unshift(phrase.sentence);
@@ -403,7 +532,7 @@ function registerWebMcpTools() {
   });
 }
 
-document.querySelector("#library-count").textContent = phrases.length;
+updateLibraryCount();
 renderPhrase(phrases[0]);
 renderLibrary();
 updateStreak();
