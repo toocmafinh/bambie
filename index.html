@@ -7,17 +7,18 @@
       name="description"
       content="Study useful Japanese sentences through translations, natural word breakdowns, readings, and quick practice."
     />
-    <meta name="theme-color" content="#17233f" />
+    <meta name="theme-color" content="#fff68b" />
     <title>Bambie — Japanese, one sentence at a time</title>
+    <link rel="icon" type="image/png" href="assets/bambie.png" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to study area</a>
 
     <div class="app-shell">
-      <aside class="sidebar" aria-label="Bambie navigation">
+      <header class="site-header" aria-label="Bambie navigation">
         <a class="brand" href="#study" aria-label="Bambie home">
-          <span class="brand-mark" aria-hidden="true">ば</span>
+          <img class="brand-mark" src="assets/bambie.png" alt="" />
           <span>
             <strong>Bambie</strong>
             <small>Japanese study</small>
@@ -37,15 +38,11 @@
           </button>
         </nav>
 
-        <div class="sidebar-note">
-          <span class="eyebrow">Today’s rhythm</span>
+        <div class="streak-pill" aria-label="Current study streak">
+          <span aria-hidden="true">✦</span>
           <strong><span id="streak-count">1</span> day streak</strong>
-          <div class="week-dots" aria-label="Study activity this week">
-            <i class="is-done"></i><i class="is-done"></i><i class="is-done"></i><i></i><i></i><i></i><i></i>
-          </div>
-          <p>A little Japanese, often.</p>
         </div>
-      </aside>
+      </header>
 
       <main id="main-content" class="main-content">
         <header class="topbar">
@@ -60,9 +57,20 @@
         </header>
 
         <section class="view is-visible" id="study-view" data-view-panel="study">
-          <div class="page-heading">
-            <p class="eyebrow">Sentence lab · 文の研究室</p>
-            <h1>Understand the whole sentence.<br /><em>Then notice every word.</em></h1>
+          <div class="study-intro">
+            <div class="page-heading">
+              <p class="eyebrow">Sentence lab · 文の研究室</p>
+              <h1>One sentence.<br /><em>One small step.</em></h1>
+              <p class="intro-copy">Bambie will help you notice how useful Japanese fits together.</p>
+            </div>
+            <aside class="guide-card" aria-label="Bambie’s encouragement">
+              <img src="assets/bambie.png" alt="Bambie, a cheerful yellow character in a green kimono" />
+              <div class="guide-message">
+                <span>今日のひとこと</span>
+                <strong lang="ja">ゆっくりでいいよ。</strong>
+                <small>Take your time.</small>
+              </div>
+            </aside>
           </div>
 
           <form class="sentence-form" id="sentence-form">
@@ -161,7 +169,7 @@
         </section>
 
         <footer>
-          <span>ば</span>
+          <img src="assets/bambie.png" alt="" />
           <p>Built for steady, curious learning.</p>
           <p lang="ja">今日も一歩ずつ。</p>
         </footer>
