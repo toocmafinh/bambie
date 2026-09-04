@@ -174,9 +174,10 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, a:focus-visib
   place-items: center;
   overflow: hidden;
   border-radius: 34px;
-  background: var(--yellow);
+  border: 1px solid var(--line);
+  background: white;
 }
-.guide-card img { width: min(90%, 330px); height: auto; mix-blend-mode: multiply; }
+.guide-card img { width: min(90%, 330px); height: auto; }
 
 .sentence-form {
   margin-top: 38px;
