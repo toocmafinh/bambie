@@ -1,0 +1,9 @@
+dist/
+.DS_Store
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.repo-history/
+.streamlit/secrets.toml
+**/.streamlit/secrets.toml
