@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Study useful Japanese sentences through translations, natural word breakdowns, readings, and quick practice."
+    />
+    <meta name="theme-color" content="#17233f" />
+    <title>Bambie — Japanese, one sentence at a time</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to study area</a>
+
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Bambie navigation">
+        <a class="brand" href="#study" aria-label="Bambie home">
+          <span class="brand-mark" aria-hidden="true">ば</span>
+          <span>
+            <strong>Bambie</strong>
+            <small>Japanese study</small>
+          </span>
+        </a>
+
+        <nav class="nav-list" aria-label="Main navigation">
+          <button class="nav-item is-active" type="button" data-view="study">
+            <span aria-hidden="true">文</span> Sentence lab
+          </button>
+          <button class="nav-item" type="button" data-view="library">
+            <span aria-hidden="true">本</span> Phrase library
+            <span class="nav-count" id="library-count">13</span>
+          </button>
+          <button class="nav-item" type="button" data-view="practice">
+            <span aria-hidden="true">練</span> Quick practice
+          </button>
+        </nav>
+
+        <div class="sidebar-note">
+          <span class="eyebrow">Today’s rhythm</span>
+          <strong><span id="streak-count">1</span> day streak</strong>
+          <div class="week-dots" aria-label="Study activity this week">
+            <i class="is-done"></i><i class="is-done"></i><i class="is-done"></i><i></i><i></i><i></i><i></i>
+          </div>
+          <p>A little Japanese, often.</p>
+        </div>
+      </aside>
+
+      <main id="main-content" class="main-content">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow" id="today-label">Friday · September 4</p>
+            <p class="welcome">おかえりなさい <span>Welcome back</span></p>
+          </div>
+          <button class="reading-toggle" id="reading-toggle" type="button" aria-pressed="false">
+            <span aria-hidden="true">あ</span>
+            <span><small>Readings</small><strong>Visible</strong></span>
+          </button>
+        </header>
+
+        <section class="view is-visible" id="study-view" data-view-panel="study">
+          <div class="page-heading">
+            <p class="eyebrow">Sentence lab · 文の研究室</p>
+            <h1>Understand the whole sentence.<br /><em>Then notice every word.</em></h1>
+          </div>
+
+          <form class="sentence-form" id="sentence-form">
+            <label for="sentence-input">Japanese sentence</label>
+            <div class="input-row">
+              <textarea id="sentence-input" rows="2" lang="ja" spellcheck="false">まぜそばって知ってますか</textarea>
+              <button class="primary-button" type="submit">
+                Break it down <span aria-hidden="true">→</span>
+              </button>
+            </div>
+            <div class="sample-row" aria-label="Sample sentences">
+              <span>Try one</span>
+              <button type="button" data-sample="ベトナムから来ました。">ベトナムから来ました。</button>
+              <button type="button" data-sample="ちょっとだけ話せる。">ちょっとだけ話せる。</button>
+              <button type="button" data-sample="そうなんだ、知らなかった！">そうなんだ、知らなかった！</button>
+            </div>
+          </form>
+
+          <section class="analysis-card" id="analysis-card" aria-live="polite">
+            <div class="analysis-header">
+              <div>
+                <span class="eyebrow">Natural meaning</span>
+                <h2 id="sentence-display" lang="ja">まぜそばって知ってますか</h2>
+                <p class="translation" id="english-display">Do you know what mazesoba is?</p>
+              </div>
+              <button class="save-button" id="save-button" type="button" aria-pressed="false">
+                <span aria-hidden="true">＋</span> Save sentence
+              </button>
+            </div>
+
+            <div class="literal-line">
+              <span>Literal</span>
+              <p id="literal-display">Mazesoba — speaking of it — do you know?</p>
+            </div>
+
+            <div class="breakdown-heading">
+              <div>
+                <span class="eyebrow">Word by word</span>
+                <h3>Select a word to explore it</h3>
+              </div>
+              <span class="word-count" id="word-count">4 pieces</span>
+            </div>
+            <div class="token-grid" id="token-grid"></div>
+          </section>
+
+          <aside class="word-detail" id="word-detail" aria-live="polite">
+            <div class="detail-index" id="detail-index">01</div>
+            <div class="detail-word">
+              <ruby id="detail-word">まぜそば<rt>まぜそば</rt></ruby>
+              <span id="detail-romaji">mazesoba</span>
+            </div>
+            <div class="detail-meaning">
+              <span class="eyebrow">Meaning &amp; use</span>
+              <h3 id="detail-meaning">Mazesoba</h3>
+              <p id="detail-note">A Japanese noodle dish served without broth; literally “mixed noodles.”</p>
+            </div>
+          </aside>
+        </section>
+
+        <section class="view" id="library-view" data-view-panel="library" hidden>
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Phrase library · 保存した文</p>
+              <h1>Useful language,<br /><em>ready to revisit.</em></h1>
+            </div>
+            <label class="search-field">
+              <span aria-hidden="true">⌕</span>
+              <input id="library-search" type="search" placeholder="Search Japanese or English" />
+            </label>
+          </div>
+          <div class="library-grid" id="library-grid"></div>
+          <p class="empty-state" id="library-empty" hidden>No matching sentences yet.</p>
+        </section>
+
+        <section class="view" id="practice-view" data-view-panel="practice" hidden>
+          <div class="page-heading compact">
+            <p class="eyebrow">Quick practice · ちょっと練習</p>
+            <h1>Recall first.<br /><em>Then reveal.</em></h1>
+          </div>
+          <div class="practice-layout">
+            <article class="flashcard" id="flashcard">
+              <span class="card-number" id="practice-number">01 / 13</span>
+              <p class="flashcard-label">What does this mean?</p>
+              <h2 id="practice-japanese" lang="ja">ベトナムから来ました。</h2>
+              <div class="answer" id="practice-answer" hidden>
+                <span class="eyebrow">Natural English</span>
+                <p id="practice-english">I came from Vietnam.</p>
+              </div>
+              <button class="primary-button reveal-button" id="reveal-button" type="button">Reveal meaning</button>
+            </article>
+            <div class="practice-controls">
+              <p>Say it aloud, make your best guess, then check the meaning.</p>
+              <button class="secondary-button" id="next-button" type="button">Next sentence <span>→</span></button>
+            </div>
+          </div>
+        </section>
+
+        <footer>
+          <span>ば</span>
+          <p>Built for steady, curious learning.</p>
+          <p lang="ja">今日も一歩ずつ。</p>
+        </footer>
+      </main>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="script.js"></script>
+  </body>
+</html>
